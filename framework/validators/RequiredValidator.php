@@ -51,31 +51,28 @@ class RequiredValidator extends Validator
      */
     public $message;
 
-
-    /**
-     * {@inheritdoc}
-     */
-    public function init()
+    public function init(): void
     {
         parent::init();
+
         if ($this->message === null) {
             $this->message = $this->requiredValue === null ? Yii::t('yii', '{attribute} cannot be blank.')
                 : Yii::t('yii', '{attribute} must be "{requiredValue}".');
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    protected function validateValue($value)
+    protected function validateValue($value): ?array
     {
         if ($this->requiredValue === null) {
-            if ($this->strict && $value !== null || !$this->strict && !$this->isEmpty(is_string($value) ? trim($value) : $value)) {
+            if (($this->strict && $value !== null)
+                || (!$this->strict && !$this->isEmpty(\is_string($value) ? trim($value) : $value))) {
                 return null;
             }
-        } elseif (!$this->strict && $value == $this->requiredValue || $this->strict && $value === $this->requiredValue) {
+        } else if ((!$this->strict && $value == $this->requiredValue)
+            || ($this->strict && $value === $this->requiredValue)) {
             return null;
         }
+
         if ($this->requiredValue === null) {
             return [$this->message, []];
         }
@@ -83,41 +80,5 @@ class RequiredValidator extends Validator
         return [$this->message, [
             'requiredValue' => $this->requiredValue,
         ]];
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function clientValidateAttribute($model, $attribute, $view)
-    {
-        ValidationAsset::register($view);
-        $options = $this->getClientOptions($model, $attribute);
-
-        return 'yii.validation.required(value, messages, ' . json_encode($options, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . ');';
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getClientOptions($model, $attribute)
-    {
-        $options = [];
-        if ($this->requiredValue !== null) {
-            $options['message'] = $this->formatMessage($this->message, [
-                'requiredValue' => $this->requiredValue,
-            ]);
-            $options['requiredValue'] = $this->requiredValue;
-        } else {
-            $options['message'] = $this->message;
-        }
-        if ($this->strict) {
-            $options['strict'] = 1;
-        }
-
-        $options['message'] = $this->formatMessage($options['message'], [
-            'attribute' => $model->getAttributeLabel($attribute),
-        ]);
-
-        return $options;
     }
 }

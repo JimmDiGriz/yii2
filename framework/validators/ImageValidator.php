@@ -87,35 +87,32 @@ class ImageValidator extends FileValidator
      */
     public $overHeight;
 
-
-    /**
-     * {@inheritdoc}
-     */
-    public function init()
+    public function init(): void
     {
         parent::init();
 
         if ($this->notImage === null) {
             $this->notImage = Yii::t('yii', 'The file "{file}" is not an image.');
         }
+
         if ($this->underWidth === null) {
             $this->underWidth = Yii::t('yii', 'The image "{file}" is too small. The width cannot be smaller than {limit, number} {limit, plural, one{pixel} other{pixels}}.');
         }
+
         if ($this->underHeight === null) {
             $this->underHeight = Yii::t('yii', 'The image "{file}" is too small. The height cannot be smaller than {limit, number} {limit, plural, one{pixel} other{pixels}}.');
         }
+
         if ($this->overWidth === null) {
             $this->overWidth = Yii::t('yii', 'The image "{file}" is too large. The width cannot be larger than {limit, number} {limit, plural, one{pixel} other{pixels}}.');
         }
+
         if ($this->overHeight === null) {
             $this->overHeight = Yii::t('yii', 'The image "{file}" is too large. The height cannot be larger than {limit, number} {limit, plural, one{pixel} other{pixels}}.');
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    protected function validateValue($value)
+    protected function validateValue($value): ?array
     {
         $result = parent::validateValue($value);
 
@@ -128,7 +125,7 @@ class ImageValidator extends FileValidator
      * @return array|null the error message and the parameters to be inserted into the error message.
      * Null should be returned if the data is valid.
      */
-    protected function validateImage($image)
+    protected function validateImage($image): ?array
     {
         if (false === ($imageInfo = getimagesize($image->tempName))) {
             return [$this->notImage, ['file' => $image->name]];
@@ -136,7 +133,7 @@ class ImageValidator extends FileValidator
 
         list($width, $height) = $imageInfo;
 
-        if ($width == 0 || $height == 0) {
+        if ($width === 0 || $height === 0) {
             return [$this->notImage, ['file' => $image->name]];
         }
 
@@ -157,65 +154,5 @@ class ImageValidator extends FileValidator
         }
 
         return null;
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function clientValidateAttribute($model, $attribute, $view)
-    {
-        ValidationAsset::register($view);
-        $options = $this->getClientOptions($model, $attribute);
-        return 'yii.validation.image(attribute, messages, ' . json_encode($options, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . ', deferred);';
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getClientOptions($model, $attribute)
-    {
-        $options = parent::getClientOptions($model, $attribute);
-
-        $label = $model->getAttributeLabel($attribute);
-
-        if ($this->notImage !== null) {
-            $options['notImage'] = $this->formatMessage($this->notImage, [
-                'attribute' => $label,
-            ]);
-        }
-
-        if ($this->minWidth !== null) {
-            $options['minWidth'] = $this->minWidth;
-            $options['underWidth'] = $this->formatMessage($this->underWidth, [
-                'attribute' => $label,
-                'limit' => $this->minWidth,
-            ]);
-        }
-
-        if ($this->maxWidth !== null) {
-            $options['maxWidth'] = $this->maxWidth;
-            $options['overWidth'] = $this->formatMessage($this->overWidth, [
-                'attribute' => $label,
-                'limit' => $this->maxWidth,
-            ]);
-        }
-
-        if ($this->minHeight !== null) {
-            $options['minHeight'] = $this->minHeight;
-            $options['underHeight'] = $this->formatMessage($this->underHeight, [
-                'attribute' => $label,
-                'limit' => $this->minHeight,
-            ]);
-        }
-
-        if ($this->maxHeight !== null) {
-            $options['maxHeight'] = $this->maxHeight;
-            $options['overHeight'] = $this->formatMessage($this->overHeight, [
-                'attribute' => $label,
-                'limit' => $this->maxHeight,
-            ]);
-        }
-
-        return $options;
     }
 }

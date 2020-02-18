@@ -25,17 +25,11 @@ namespace yii\validators;
  */
 class SafeValidator extends Validator
 {
-    /**
-     * {@inheritdoc}
-     */
-    public function validateAttributes($model, $attributes = null)
+    public function validateAttributes($model, $attributes = null): void
     {
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function validateAttribute($model, $attribute)
+    public function validateAttribute($model, $attribute): void
     {
     }
 }

@@ -9,9 +9,6 @@ namespace yii\validators;
 
 use Yii;
 use yii\base\InvalidConfigException;
-use yii\helpers\Html;
-use yii\helpers\Json;
-use yii\web\JsExpression;
 
 /**
  * RegularExpressionValidator validates that the attribute value matches the specified [[pattern]].
@@ -33,62 +30,25 @@ class RegularExpressionValidator extends Validator
      */
     public $not = false;
 
-
-    /**
-     * {@inheritdoc}
-     */
-    public function init()
+    public function init(): void
     {
         parent::init();
+
         if ($this->pattern === null) {
             throw new InvalidConfigException('The "pattern" property must be set.');
         }
+
         if ($this->message === null) {
             $this->message = Yii::t('yii', '{attribute} is invalid.');
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    protected function validateValue($value)
+    protected function validateValue($value): ?array
     {
-        $valid = !is_array($value) &&
-            (!$this->not && preg_match($this->pattern, $value)
-            || $this->not && !preg_match($this->pattern, $value));
+        $valid = !\is_array($value) &&
+            ((!$this->not && preg_match($this->pattern, $value))
+                || ($this->not && !preg_match($this->pattern, $value)));
 
         return $valid ? null : [$this->message, []];
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function clientValidateAttribute($model, $attribute, $view)
-    {
-        ValidationAsset::register($view);
-        $options = $this->getClientOptions($model, $attribute);
-
-        return 'yii.validation.regularExpression(value, messages, ' . Json::htmlEncode($options) . ');';
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getClientOptions($model, $attribute)
-    {
-        $pattern = Html::escapeJsRegularExpression($this->pattern);
-
-        $options = [
-            'pattern' => new JsExpression($pattern),
-            'not' => $this->not,
-            'message' => $this->formatMessage($this->message, [
-                'attribute' => $model->getAttributeLabel($attribute),
-            ]),
-        ];
-        if ($this->skipOnEmpty) {
-            $options['skipOnEmpty'] = 1;
-        }
-
-        return $options;
     }
 }

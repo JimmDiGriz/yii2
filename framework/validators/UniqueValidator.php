@@ -93,19 +93,17 @@ class UniqueValidator extends Validator
      * @var bool whether this validator is forced to always use master DB
      * @since 2.0.14
      */
-    public $forceMasterDb =  true;
+    public $forceMasterDb = true;
 
-
-    /**
-     * {@inheritdoc}
-     */
-    public function init()
+    public function init(): void
     {
         parent::init();
+
         if ($this->message !== null) {
             return;
         }
-        if (is_array($this->targetAttribute) && count($this->targetAttribute) > 1) {
+
+        if (\is_array($this->targetAttribute) && \count($this->targetAttribute) > 1) {
             // fallback for deprecated `comboNotUnique` property - use it as message if is set
             if ($this->comboNotUnique === null) {
                 $this->message = Yii::t('yii', 'The combination {values} of {attributes} has already been taken.');
@@ -117,10 +115,7 @@ class UniqueValidator extends Validator
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function validateAttribute($model, $attribute)
+    public function validateAttribute($model, $attribute): void
     {
         /* @var $targetClass ActiveRecordInterface */
         $targetClass = $this->getTargetClass($model);
@@ -129,10 +124,11 @@ class UniqueValidator extends Validator
         $conditions = [$this->targetAttributeJunction === 'or' ? 'or' : 'and'];
 
         foreach ($rawConditions as $key => $value) {
-            if (is_array($value)) {
+            if (\is_array($value)) {
                 $this->addError($model, $attribute, Yii::t('yii', '{attribute} is invalid.'));
                 return;
             }
+
             $conditions[] = [$key => $value];
         }
 
@@ -149,7 +145,7 @@ class UniqueValidator extends Validator
         }
 
         if ($modelExists) {
-            if (is_array($targetAttribute) && count($targetAttribute) > 1) {
+            if (\is_array($targetAttribute) && \count($targetAttribute) > 1) {
                 $this->addComboNotUniqueError($model, $attribute);
             } else {
                 $this->addError($model, $attribute, $this->message);
@@ -161,9 +157,9 @@ class UniqueValidator extends Validator
      * @param Model $model the data model to be validated
      * @return string Target class name
      */
-    private function getTargetClass($model)
+    private function getTargetClass($model): string
     {
-        return $this->targetClass === null ? get_class($model) : $this->targetClass;
+        return $this->targetClass ?? \get_class($model);
     }
 
     /**
@@ -176,44 +172,49 @@ class UniqueValidator extends Validator
      *
      * @return bool whether the model already exists
      */
-    private function modelExists($targetClass, $conditions, $model)
+    private function modelExists($targetClass, $conditions, $model): bool
     {
         /** @var ActiveRecordInterface|\yii\base\BaseObject $targetClass $query */
         $query = $this->prepareQuery($targetClass, $conditions);
 
-        if (!$model instanceof ActiveRecordInterface || $model->getIsNewRecord() || $model->className() !== $targetClass::className()) {
+        if (!$model instanceof ActiveRecordInterface || $model->getIsNewRecord() || $model::className() !== $targetClass::className()) {
             // if current $model isn't in the database yet then it's OK just to call exists()
             // also there's no need to run check based on primary keys, when $targetClass is not the same as $model's class
             $exists = $query->exists();
         } else {
             // if current $model is in the database already we can't use exists()
-            if ($query instanceof \yii\db\ActiveQuery) {
+            if ($query instanceof ActiveQuery) {
                 // only select primary key to optimize query
                 $columnsCondition = array_flip($targetClass::primaryKey());
                 $query->select(array_flip($this->applyTableAlias($query, $columnsCondition)));
-                
+
                 // any with relation can't be loaded because related fields are not selected
                 $query->with = null;
-    
-                if (is_array($query->joinWith)) {
+
+                if (\is_array($query->joinWith)) {
                     // any joinWiths need to have eagerLoading turned off to prevent related fields being loaded
                     foreach ($query->joinWith as &$joinWith) {
                         // \yii\db\ActiveQuery::joinWith adds eagerLoading at key 1
                         $joinWith[1] = false;
                     }
+
                     unset($joinWith);
                 }
             }
+
             $models = $query->limit(2)->asArray()->all();
-            $n = count($models);
+            $n = \count($models);
             if ($n === 1) {
                 // if there is one record, check if it is the currently validated model
                 $dbModel = reset($models);
                 $pks = $targetClass::primaryKey();
                 $pk = [];
+
                 foreach ($pks as $pkAttribute) {
                     $pk[$pkAttribute] = $dbModel[$pkAttribute];
                 }
+
+                /** @noinspection TypeUnsafeComparisonInspection */
                 $exists = ($pk != $model->getOldPrimaryKey(true));
             } else {
                 // if there is more than one record, the value is not unique
@@ -239,8 +240,8 @@ class UniqueValidator extends Validator
         $query = $targetClass::find();
         $query->andWhere($conditions);
         if ($this->filter instanceof \Closure) {
-            call_user_func($this->filter, $query);
-        } elseif ($this->filter !== null) {
+            \call_user_func($this->filter, $query);
+        } else if ($this->filter !== null) {
             $query->andWhere($this->filter);
         }
 
@@ -261,10 +262,12 @@ class UniqueValidator extends Validator
      *
      * @return array conditions, compatible with [[\yii\db\Query::where()|Query::where()]] key-value format.
      */
-    private function prepareConditions($targetAttribute, $model, $attribute)
+    private function prepareConditions($targetAttribute, $model, $attribute): array
     {
-        if (is_array($targetAttribute)) {
+        if (\is_array($targetAttribute)) {
             $conditions = [];
+
+            /** @noinspection ForeachSourceInspection */
             foreach ($targetAttribute as $k => $v) {
                 $conditions[$v] = is_int($k) ? $model->$v : $model->$k;
             }
@@ -273,7 +276,7 @@ class UniqueValidator extends Validator
         }
 
         $targetModelClass = $this->getTargetClass($model);
-        if (!is_subclass_of($targetModelClass, 'yii\db\ActiveRecord')) {
+        if (!is_subclass_of($targetModelClass, ActiveRecord::class)) {
             return $conditions;
         }
 
@@ -286,12 +289,14 @@ class UniqueValidator extends Validator
      * @param \yii\base\Model $model the data model.
      * @param string $attribute the name of the attribute.
      */
-    private function addComboNotUniqueError($model, $attribute)
+    private function addComboNotUniqueError($model, $attribute): void
     {
         $attributeCombo = [];
         $valueCombo = [];
+
+        /** @noinspection ForeachSourceInspection */
         foreach ($this->targetAttribute as $key => $value) {
-            if (is_int($key)) {
+            if (\is_int($key)) {
                 $attributeCombo[] = $model->getAttributeLabel($value);
                 $valueCombo[] = '"' . $model->$value . '"';
             } else {
@@ -299,6 +304,7 @@ class UniqueValidator extends Validator
                 $valueCombo[] = '"' . $model->$key . '"';
             }
         }
+
         $this->addError($model, $attribute, $this->message, [
             'attributes' => Inflector::sentence($attributeCombo),
             'values' => implode('-', $valueCombo),
@@ -312,14 +318,16 @@ class UniqueValidator extends Validator
      * @param null|string $alias set empty string for no apply alias. Set null for apply primary table alias
      * @return array
      */
-    private function applyTableAlias($query, $conditions, $alias = null)
+    private function applyTableAlias($query, $conditions, $alias = null): array
     {
         if ($alias === null) {
             $alias = array_keys($query->getTablesUsedInFrom())[0];
         }
+
         $prefixedConditions = [];
         foreach ($conditions as $columnName => $columnValue) {
             if (strpos($columnName, '(') === false) {
+                /** @noinspection PregQuoteUsageInspection */
                 $columnName = preg_replace('/^' . preg_quote($alias) . '\.(.*)$/', '$1', $columnName);
                 if (strpos($columnName, '[[') === 0) {
                     $prefixedColumn = "{$alias}.{$columnName}";

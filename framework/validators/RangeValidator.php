@@ -49,14 +49,10 @@ class RangeValidator extends Validator
      */
     public $allowArray = false;
 
-
-    /**
-     * {@inheritdoc}
-     */
-    public function init()
+    public function init(): void
     {
         parent::init();
-        if (!is_array($this->range)
+        if (!\is_array($this->range)
             && !($this->range instanceof \Closure)
             && !($this->range instanceof \Traversable)
         ) {
@@ -67,15 +63,20 @@ class RangeValidator extends Validator
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    protected function validateValue($value)
+    public function validateAttribute($model, $attribute): void
+    {
+        if ($this->range instanceof \Closure) {
+            $this->range = \call_user_func($this->range, $model, $attribute);
+        }
+        parent::validateAttribute($model, $attribute);
+    }
+
+    protected function validateValue($value): ?array
     {
         $in = false;
 
         if ($this->allowArray
-            && ($value instanceof \Traversable || is_array($value))
+            && ($value instanceof \Traversable || \is_array($value))
             && ArrayHelper::isSubset($value, $this->range, $this->strict)
         ) {
             $in = true;
@@ -86,57 +87,5 @@ class RangeValidator extends Validator
         }
 
         return $this->not !== $in ? null : [$this->message, []];
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function validateAttribute($model, $attribute)
-    {
-        if ($this->range instanceof \Closure) {
-            $this->range = call_user_func($this->range, $model, $attribute);
-        }
-        parent::validateAttribute($model, $attribute);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function clientValidateAttribute($model, $attribute, $view)
-    {
-        if ($this->range instanceof \Closure) {
-            $this->range = call_user_func($this->range, $model, $attribute);
-        }
-
-        ValidationAsset::register($view);
-        $options = $this->getClientOptions($model, $attribute);
-
-        return 'yii.validation.range(value, messages, ' . json_encode($options, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . ');';
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getClientOptions($model, $attribute)
-    {
-        $range = [];
-        foreach ($this->range as $value) {
-            $range[] = (string) $value;
-        }
-        $options = [
-            'range' => $range,
-            'not' => $this->not,
-            'message' => $this->formatMessage($this->message, [
-                'attribute' => $model->getAttributeLabel($attribute),
-            ]),
-        ];
-        if ($this->skipOnEmpty) {
-            $options['skipOnEmpty'] = 1;
-        }
-        if ($this->allowArray) {
-            $options['allowArray'] = 1;
-        }
-
-        return $options;
     }
 }

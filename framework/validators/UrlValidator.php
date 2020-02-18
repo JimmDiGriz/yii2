@@ -9,8 +9,6 @@ namespace yii\validators;
 
 use Yii;
 use yii\base\InvalidConfigException;
-use yii\helpers\Json;
-use yii\web\JsExpression;
 
 /**
  * UrlValidator validates that the attribute value is a valid http or https URL.
@@ -48,28 +46,24 @@ class UrlValidator extends Validator
      */
     public $enableIDN = false;
 
-
-    /**
-     * {@inheritdoc}
-     */
-    public function init()
+    public function init(): void
     {
         parent::init();
-        if ($this->enableIDN && !function_exists('idn_to_ascii')) {
+
+        if ($this->enableIDN && !\function_exists('idn_to_ascii')) {
             throw new InvalidConfigException('In order to use IDN validation intl extension must be installed and enabled.');
         }
+
         if ($this->message === null) {
             $this->message = Yii::t('yii', '{attribute} is not a valid URL.');
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function validateAttribute($model, $attribute)
+    public function validateAttribute($model, $attribute): void
     {
         $value = $model->$attribute;
         $result = $this->validateValue($value);
+
         if (!empty($result)) {
             $this->addError($model, $attribute, $result[0], $result[1]);
         } elseif ($this->defaultScheme !== null && strpos($value, '://') === false) {
@@ -77,13 +71,10 @@ class UrlValidator extends Validator
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    protected function validateValue($value)
+    protected function validateValue($value): ?array
     {
         // make sure the length is limited to avoid DOS attacks
-        if (is_string($value) && strlen($value) < 2000) {
+        if (\is_string($value) && \strlen($value) < 2000) {
             if ($this->defaultScheme !== null && strpos($value, '://') === false) {
                 $value = $this->defaultScheme . '://' . $value;
             }
@@ -110,53 +101,6 @@ class UrlValidator extends Validator
 
     private function idnToAscii($idn)
     {
-        if (PHP_VERSION_ID < 50600) {
-            // TODO: drop old PHP versions support
-            return idn_to_ascii($idn);
-        }
-
         return idn_to_ascii($idn, IDNA_NONTRANSITIONAL_TO_ASCII, INTL_IDNA_VARIANT_UTS46);
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function clientValidateAttribute($model, $attribute, $view)
-    {
-        ValidationAsset::register($view);
-        if ($this->enableIDN) {
-            PunycodeAsset::register($view);
-        }
-        $options = $this->getClientOptions($model, $attribute);
-
-        return 'yii.validation.url(value, messages, ' . Json::htmlEncode($options) . ');';
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getClientOptions($model, $attribute)
-    {
-        if (strpos($this->pattern, '{schemes}') !== false) {
-            $pattern = str_replace('{schemes}', '(' . implode('|', $this->validSchemes) . ')', $this->pattern);
-        } else {
-            $pattern = $this->pattern;
-        }
-
-        $options = [
-            'pattern' => new JsExpression($pattern),
-            'message' => $this->formatMessage($this->message, [
-                'attribute' => $model->getAttributeLabel($attribute),
-            ]),
-            'enableIDN' => (bool) $this->enableIDN,
-        ];
-        if ($this->skipOnEmpty) {
-            $options['skipOnEmpty'] = 1;
-        }
-        if ($this->defaultScheme !== null) {
-            $options['defaultScheme'] = $this->defaultScheme;
-        }
-
-        return $options;
     }
 }

@@ -40,19 +40,19 @@ class DateValidator extends Validator
      * @since 2.0.8
      * @see type
      */
-    const TYPE_DATE = 'date';
+    public const TYPE_DATE = 'date';
     /**
      * Constant for specifying the validation [[type]] as a datetime value, used for validation with intl short format.
      * @since 2.0.8
      * @see type
      */
-    const TYPE_DATETIME = 'datetime';
+    public const TYPE_DATETIME = 'datetime';
     /**
      * Constant for specifying the validation [[type]] as a time value, used for validation with intl short format.
      * @since 2.0.8
      * @see type
      */
-    const TYPE_TIME = 'time';
+    public const TYPE_TIME = 'time';
 
     /**
      * @var string the type of the validator. Indicates, whether a date, time or datetime value should be validated.
@@ -213,16 +213,13 @@ class DateValidator extends Validator
         'full' => 0, // IntlDateFormatter::FULL,
     ];
 
-
-    /**
-     * {@inheritdoc}
-     */
-    public function init()
+    public function init(): void
     {
         parent::init();
         if ($this->message === null) {
             $this->message = Yii::t('yii', 'The format of {attribute} is invalid.');
         }
+
         if ($this->format === null) {
             if ($this->type === self::TYPE_DATE) {
                 $this->format = Yii::$app->formatter->dateFormat;
@@ -234,32 +231,40 @@ class DateValidator extends Validator
                 throw new InvalidConfigException('Unknown validation type set for DateValidator::$type: ' . $this->type);
             }
         }
+
         if ($this->locale === null) {
             $this->locale = Yii::$app->language;
         }
+
         if ($this->timeZone === null) {
             $this->timeZone = Yii::$app->timeZone;
         }
+
         if ($this->min !== null && $this->tooSmall === null) {
             $this->tooSmall = Yii::t('yii', '{attribute} must be no less than {min}.');
         }
+
         if ($this->max !== null && $this->tooBig === null) {
             $this->tooBig = Yii::t('yii', '{attribute} must be no greater than {max}.');
         }
+
         if ($this->maxString === null) {
             $this->maxString = (string)$this->max;
         }
+
         if ($this->minString === null) {
             $this->minString = (string)$this->min;
         }
-        if ($this->max !== null && is_string($this->max)) {
+
+        if ($this->max !== null && \is_string($this->max)) {
             $timestamp = $this->parseDateValue($this->max);
             if ($timestamp === false) {
                 throw new InvalidConfigException("Invalid max date value: {$this->max}");
             }
             $this->max = $timestamp;
         }
-        if ($this->min !== null && is_string($this->min)) {
+
+        if ($this->min !== null && \is_string($this->min)) {
             $timestamp = $this->parseDateValue($this->min);
             if ($timestamp === false) {
                 throw new InvalidConfigException("Invalid min date value: {$this->min}");
@@ -268,10 +273,7 @@ class DateValidator extends Validator
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    public function validateAttribute($model, $attribute)
+    public function validateAttribute($model, $attribute): void
     {
         $value = $model->$attribute;
         if ($this->isEmpty($value)) {
@@ -285,7 +287,7 @@ class DateValidator extends Validator
         if ($timestamp === false) {
             if ($this->timestampAttribute === $attribute) {
                 if ($this->timestampAttributeFormat === null) {
-                    if (is_int($value)) {
+                    if (\is_int($value)) {
                         return;
                     }
                 } else {
@@ -295,11 +297,11 @@ class DateValidator extends Validator
                 }
             }
             $this->addError($model, $attribute, $this->message, []);
-        } elseif ($this->min !== null && $timestamp < $this->min) {
+        } else if ($this->min !== null && $timestamp < $this->min) {
             $this->addError($model, $attribute, $this->tooSmall, ['min' => $this->minString]);
-        } elseif ($this->max !== null && $timestamp > $this->max) {
+        } else if ($this->max !== null && $timestamp > $this->max) {
             $this->addError($model, $attribute, $this->tooBig, ['max' => $this->maxString]);
-        } elseif ($this->timestampAttribute !== null) {
+        } else if ($this->timestampAttribute !== null) {
             if ($this->timestampAttributeFormat === null) {
                 $model->{$this->timestampAttribute} = $timestamp;
             } else {
@@ -308,17 +310,18 @@ class DateValidator extends Validator
         }
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    protected function validateValue($value)
+    protected function validateValue($value): ?array
     {
         $timestamp = $this->parseDateValue($value);
         if ($timestamp === false) {
             return [$this->message, []];
-        } elseif ($this->min !== null && $timestamp < $this->min) {
+        }
+
+        if ($this->min !== null && $timestamp < $this->min) {
             return [$this->tooSmall, ['min' => $this->minString]];
-        } elseif ($this->max !== null && $timestamp > $this->max) {
+        }
+
+        if ($this->max !== null && $timestamp > $this->max) {
             return [$this->tooBig, ['max' => $this->maxString]];
         }
 
@@ -347,13 +350,16 @@ class DateValidator extends Validator
      */
     private function parseDateValueFormat($value, $format)
     {
-        if (is_array($value)) {
+        /** @noinspection CallableParameterUseCaseInTypeContextInspection */
+        if (\is_array($value)) {
             return false;
         }
+
         if (strncmp($format, 'php:', 4) === 0) {
+            /** @noinspection CallableParameterUseCaseInTypeContextInspection */
             $format = substr($format, 4);
         } else {
-            if (extension_loaded('intl')) {
+            if (\extension_loaded('intl')) {
                 return $this->parseDateValueIntl($value, $format);
             }
 
@@ -396,12 +402,18 @@ class DateValidator extends Validator
      * @return IntlDateFormatter
      * @throws InvalidConfigException
      */
-    private function getIntlDateFormatter($format)
+    private function getIntlDateFormatter($format): IntlDateFormatter
     {
         if (!isset($this->_dateFormats[$format])) {
             // if no time was provided in the format string set time to 0 to get a simple date timestamp
             $hasTimeInfo = (strpbrk($format, 'ahHkKmsSA') !== false);
-            $formatter = new IntlDateFormatter($this->locale, IntlDateFormatter::NONE, IntlDateFormatter::NONE, $hasTimeInfo ? $this->timeZone : 'UTC', null, $format);
+            $formatter = new IntlDateFormatter(
+                $this->locale,
+                IntlDateFormatter::NONE,
+                IntlDateFormatter::NONE,
+                $hasTimeInfo ? $this->timeZone : 'UTC',
+                null,
+                $format);
 
             return $formatter;
         }
@@ -410,11 +422,11 @@ class DateValidator extends Validator
             $dateType = $this->_dateFormats[$format];
             $timeType = IntlDateFormatter::NONE;
             $timeZone = 'UTC';
-        } elseif ($this->type === self::TYPE_DATETIME) {
+        } else if ($this->type === self::TYPE_DATETIME) {
             $dateType = $this->_dateFormats[$format];
             $timeType = $this->_dateFormats[$format];
             $timeZone = $this->timeZone;
-        } elseif ($this->type === self::TYPE_TIME) {
+        } else if ($this->type === self::TYPE_TIME) {
             $dateType = IntlDateFormatter::NONE;
             $timeType = $this->_dateFormats[$format];
             $timeZone = $this->timeZone;
@@ -440,7 +452,8 @@ class DateValidator extends Validator
 
         $date = DateTime::createFromFormat($format, $value, new \DateTimeZone($hasTimeInfo ? $this->timeZone : 'UTC'));
         $errors = DateTime::getLastErrors();
-        if ($date === false || $errors['error_count'] || $errors['warning_count'] || ($this->strictDateFormat && $date->format($format) !== $value)) {
+        if ($date === false || $errors['error_count'] || $errors['warning_count']
+            || ($this->strictDateFormat && $date->format($format) !== $value)) {
             return false;
         }
 
@@ -458,9 +471,10 @@ class DateValidator extends Validator
      * @return string
      * @throws Exception
      */
-    private function formatTimestamp($timestamp, $format)
+    private function formatTimestamp($timestamp, $format): string
     {
         if (strncmp($format, 'php:', 4) === 0) {
+            /** @noinspection CallableParameterUseCaseInTypeContextInspection */
             $format = substr($format, 4);
         } else {
             $format = FormatConverter::convertDateIcuToPhp($format, 'date');

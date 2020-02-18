@@ -37,15 +37,11 @@ class DefaultValueValidator extends Validator
      */
     public $skipOnEmpty = false;
 
-
-    /**
-     * {@inheritdoc}
-     */
-    public function validateAttribute($model, $attribute)
+    public function validateAttribute($model, $attribute): void
     {
         if ($this->isEmpty($model->$attribute)) {
             if ($this->value instanceof \Closure) {
-                $model->$attribute = call_user_func($this->value, $model, $attribute);
+                $model->$attribute = \call_user_func($this->value, $model, $attribute);
             } else {
                 $model->$attribute = $this->value;
             }

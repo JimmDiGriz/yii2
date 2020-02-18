@@ -75,11 +75,7 @@ class EachValidator extends Validator
      */
     private $_validator;
 
-
-    /**
-     * {@inheritdoc}
-     */
-    public function init()
+    public function init(): void
     {
         parent::init();
         if ($this->message === null) {
@@ -87,49 +83,10 @@ class EachValidator extends Validator
         }
     }
 
-    /**
-     * Returns the validator declared in [[rule]].
-     * @param Model|null $model model in which context validator should be created.
-     * @return Validator the declared validator.
-     */
-    private function getValidator($model = null)
-    {
-        if ($this->_validator === null) {
-            $this->_validator = $this->createEmbeddedValidator($model);
-        }
-
-        return $this->_validator;
-    }
-
-    /**
-     * Creates validator object based on the validation rule specified in [[rule]].
-     * @param Model|null $model model in which context validator should be created.
-     * @throws \yii\base\InvalidConfigException
-     * @return Validator validator instance
-     */
-    private function createEmbeddedValidator($model)
-    {
-        $rule = $this->rule;
-        if ($rule instanceof Validator) {
-            return $rule;
-        } elseif (is_array($rule) && isset($rule[0])) { // validator type
-            if (!is_object($model)) {
-                $model = new Model(); // mock up context model
-            }
-
-            return Validator::createValidator($rule[0], $model, $this->attributes, array_slice($rule, 1));
-        }
-
-        throw new InvalidConfigException('Invalid validation rule: a rule must be an array specifying validator type.');
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function validateAttribute($model, $attribute)
+    public function validateAttribute($model, $attribute): void
     {
         $value = $model->$attribute;
-        if (!is_array($value) && !$value instanceof \ArrayAccess) {
+        if (!\is_array($value) && !$value instanceof \ArrayAccess) {
             $this->addError($model, $attribute, $this->message, []);
             return;
         }
@@ -138,6 +95,7 @@ class EachValidator extends Validator
 
         $detectedErrors = $model->getErrors($attribute);
         $filteredValue = $model->$attribute;
+
         foreach ($value as $k => $v) {
             $model->clearErrors($attribute);
             $model->$attribute = $v;
@@ -148,6 +106,7 @@ class EachValidator extends Validator
             if ($model->hasErrors($attribute)) {
                 if ($this->allowMessageFromRule) {
                     $validationErrors = $model->getErrors($attribute);
+                    /** @noinspection SlowArrayOperationsInLoopInspection */
                     $detectedErrors = array_merge($detectedErrors, $validationErrors);
                 } else {
                     $model->clearErrors($attribute);
@@ -167,16 +126,14 @@ class EachValidator extends Validator
         $model->addErrors([$attribute => $detectedErrors]);
     }
 
-    /**
-     * {@inheritdoc}
-     */
-    protected function validateValue($value)
+    protected function validateValue($value): ?array
     {
-        if (!is_array($value) && !$value instanceof \ArrayAccess) {
+        if (!\is_array($value) && !$value instanceof \ArrayAccess) {
             return [$this->message, []];
         }
 
         $validator = $this->getValidator();
+        /** @noinspection ForeachSourceInspection */
         foreach ($value as $v) {
             if ($validator->skipOnEmpty && $validator->isEmpty($v)) {
                 continue;
@@ -193,5 +150,43 @@ class EachValidator extends Validator
         }
 
         return null;
+    }
+
+    /**
+     * Returns the validator declared in [[rule]].
+     * @param Model|null $model model in which context validator should be created.
+     * @return Validator the declared validator.
+     */
+    private function getValidator($model = null): Validator
+    {
+        if ($this->_validator === null) {
+            $this->_validator = $this->createEmbeddedValidator($model);
+        }
+
+        return $this->_validator;
+    }
+
+    /**
+     * Creates validator object based on the validation rule specified in [[rule]].
+     * @param Model|null $model model in which context validator should be created.
+     * @throws \yii\base\InvalidConfigException
+     * @return Validator validator instance
+     */
+    private function createEmbeddedValidator($model): Validator
+    {
+        $rule = $this->rule;
+        if ($rule instanceof Validator) {
+            return $rule;
+        }
+
+        if (\is_array($rule) && isset($rule[0])) { // validator type
+            if (!\is_object($model)) {
+                $model = new Model(); // mock up context model
+            }
+
+            return Validator::createValidator($rule[0], $model, $this->attributes, \array_slice($rule, 1));
+        }
+
+        throw new InvalidConfigException('Invalid validation rule: a rule must be an array specifying validator type.');
     }
 }

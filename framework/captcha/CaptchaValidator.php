@@ -52,17 +52,6 @@ class CaptchaValidator extends Validator
     }
 
     /**
-     * {@inheritdoc}
-     */
-    protected function validateValue($value)
-    {
-        $captcha = $this->createCaptchaAction();
-        $valid = !is_array($value) && $captcha->validate($value, $this->caseSensitive);
-
-        return $valid ? null : [$this->message, []];
-    }
-
-    /**
      * Creates the CAPTCHA action object from the route specified by [[captchaAction]].
      * @return \yii\captcha\CaptchaAction the action object
      * @throws InvalidConfigException
@@ -84,34 +73,11 @@ class CaptchaValidator extends Validator
     /**
      * {@inheritdoc}
      */
-    public function clientValidateAttribute($model, $attribute, $view)
-    {
-        ValidationAsset::register($view);
-        $options = $this->getClientOptions($model, $attribute);
-
-        return 'yii.validation.captcha(value, messages, ' . json_encode($options, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . ');';
-    }
-
-    /**
-     * {@inheritdoc}
-     */
-    public function getClientOptions($model, $attribute)
+    protected function validateValue($value)
     {
         $captcha = $this->createCaptchaAction();
-        $code = $captcha->getVerifyCode(false);
-        $hash = $captcha->generateValidationHash($this->caseSensitive ? $code : strtolower($code));
-        $options = [
-            'hash' => $hash,
-            'hashKey' => 'yiiCaptcha/' . $captcha->getUniqueId(),
-            'caseSensitive' => $this->caseSensitive,
-            'message' => Yii::$app->getI18n()->format($this->message, [
-                'attribute' => $model->getAttributeLabel($attribute),
-            ], Yii::$app->language),
-        ];
-        if ($this->skipOnEmpty) {
-            $options['skipOnEmpty'] = 1;
-        }
+        $valid = !is_array($value) && $captcha->validate($value, $this->caseSensitive);
 
-        return $options;
+        return $valid ? null : [$this->message, []];
     }
 }
